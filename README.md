@@ -1,9 +1,13 @@
 # lmodbus
-This is an implementatin of the [ModBus](https://en.wikipedia.org/wiki/Modbus) protocol for [Lua](https://en.wikipedia.org/wiki/Lua_(programming_language)).
+This is an implementatin of the [ModBus](https://en.wikipedia.org/wiki/Modbus) protocol for [Lua](https://en.wikipedia.org/wiki/Lua_(programming_language)). I wrote it when I needed it for a particular task and I am putting it out in the hope that it might be useful to someone else.
 
 Of course, there are other — and more extensive — Lua implementations of the ModBus protocol on the Web. I created mine because I couldn't find one that would simultaneously:
-* have both server and client capabilities;
-* be "channel agnostic", that is, allow me to create the request or parse the response, but wouldn't drag around with it its own implementation of the COM port.
+- have both server and client capabilities;
+- be "channel agnostic", that is, allow me to work with the data, but wouldn't drag around with it its own implementation of the COM port.
+
+**Important: `lmodbus` uses native bitwise operators `&`, `|`, etc. that were introduced only in Lua 5.3. This means that you can't use `lmodbus` with Lua versions prior to 5.3, sorry :( Portability was not so much of a concern for my task as was the speed of development/program execution.**
+
+**However, you can still port `lmodbus` yourself by rewriting the functions `band()`, `bor()`, etc. It may be not so difficult as it seems. You should include some [implementation of bitwise operators](http://lua-users.org/wiki/BitwiseOperators) and replace the operators `&`, `|`, etc. with matching function calls.**
 
 # Usage example
 
