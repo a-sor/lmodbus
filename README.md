@@ -7,7 +7,7 @@ Of course, there are other — and more extensive — Lua implementations of the
 
 **Important: `lmodbus` uses native bitwise operators `&`, `|`, etc. that were introduced only in Lua 5.3. This means that you can't use `lmodbus` with Lua versions prior to 5.3, sorry :( Portability was not so much of a concern for my task as was the speed of development/program execution.**
 
-**However, you can still port `lmodbus` yourself by rewriting the functions `band()`, `bor()`, etc. It may be not so difficult as it seems. You should include some [implementation of bitwise operators](http://lua-users.org/wiki/BitwiseOperators) and replace the operators `&`, `|`, etc. with matching function calls.**
+**However, you can still port `lmodbus` yourself by rewriting the functions `band()`, `bor()`, etc. It may not be so difficult as it seems. You should include some [implementation of bitwise operators](http://lua-users.org/wiki/BitwiseOperators) and replace the operators `&`, `|`, etc. with matching function calls.**
 
 # Usage example
 
