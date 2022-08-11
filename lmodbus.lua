@@ -7,7 +7,7 @@
 
   -- supported ModBus functions
   local funcs = {
-    -- READ_COILS =                    0x01,
+    READ_COILS =                    0x01,
     -- READ_DISCRETE_INPUTS =          0x02,
     READ_HOLDING_REGISTERS =        0x03,
     READ_INPUT_REGISTERS =          0x04,
@@ -174,17 +174,6 @@ end
 
 -------------------------------------------------------------------------------
 
---static INLINE uint16_t calc_crc16(const void * buf, size_t size) {
---    uint16_t crc = 0xFFFF;
---    const uint8_t *p = buf;
---
---    while (size--)
---        crc = (crc >> 8) ^ crc16_tab[(crc ^ *p++) & 0xff];
---
---    return crc;
---}
-
-
 local function calc_crc16(str, size)
   local crc = 0xFFFF
 
@@ -323,7 +312,142 @@ local function new_adu(xact)
 end
 
 -------------------------------------------------------------------------------
--- READ HOLDING REGISTERS */
+
+local function calc_byte_count(bit_count)
+  local byte_count, frac = math.modf(bit_count / 8)
+
+  if frac ~= 0.0 then
+    byte_count = byte_count + 1
+  end
+
+  return byte_count
+end
+
+-------------------------------------------------------------------------------
+-- READ COILS
+-------------------------------------------------------------------------------
+
+local function build_request_read_coils(xact)
+
+  if not in_range(xact.bit_count, 1, 2000) then
+    errorf("'bit_count' value (%s) is not properly assigned or out of range 1..2000",
+      tostring(xact.word_count))
+  end
+
+  local req = new_adu(xact) ..
+    string.char(funcs.READ_COILS) ..
+    mk_word(xact.start_addr) ..
+    mk_word(xact.bit_count)
+
+  if is_rtu(xact) then
+    req = req .. mk_word_le(calc_crc16(req))
+  end
+
+  if is_tcp(xact) then
+    req = fix_mbap_length(req)
+  end
+
+  return req
+end
+
+-------------------------------------------------------------------------------
+
+local function parse_request_read_coils(xact, req)
+
+  local req_size = adu_extra_size(xact) + 5
+
+  if #req < req_size then
+    return false, stat.NOT_COMPLETED
+  end
+
+  -- TODO check crc
+
+  xact.start_addr = word_at(req, adu_header_size(xact) + 1)
+  xact.bit_count = word_at(req, adu_header_size(xact) + 3)
+
+  return true, req_size
+end
+
+-------------------------------------------------------------------------------
+
+local function build_response_read_coils(xact)
+
+  -- TODO check request, e.g. coil count
+
+  local byte_count = calc_byte_count(#xact.bits)
+
+  local resp = new_adu(xact) ..
+    string.char(funcs.READ_COILS) ..
+    string.char(byte_count)
+
+  local byte = 0
+  for i = 0, xact.bit_count - 1 do
+    if xact.bits[i + 1] == 1 then
+      byte = bor(byte, blshift(1, i % 8))
+    end
+    if (i ~= 0 and i % 8 == 0) or (i == xact.bit_count - 1) then
+      resp = resp .. byte
+      byte = 0
+    end
+  end
+
+  if is_rtu(xact) then
+    resp = resp .. mk_word_le(calc_crc16(resp))
+  end
+
+  if is_tcp(xact) then
+    resp = fix_mbap_length(resp)
+  end
+
+  return true, resp
+end
+
+-------------------------------------------------------------------------------
+
+local function parse_response_read_coils(xact, resp)
+
+  local resp_lead_size = adu_header_size(xact) + 2
+
+  if #resp < resp_lead_size then
+    return false, stat.NOT_COMPLETED
+  end
+
+  local bc = response_byte_count(xact, resp)
+  local resp_size = resp_lead_size + bc + crc_size(xact)
+
+  if #resp < resp_size then
+    -- didn't get the whole response
+    return false, stat.NOT_COMPLETED
+  end
+
+  if is_rtu(xact) and not check_crc16(resp) then
+    return false, stat.CRC_ERROR
+  end
+
+  if is_tcp(xact) and get_mbap_length(resp) ~= bc + 3 then
+    return false, stat.INVALID_RESPONSE
+  end
+
+  if calc_byte_count(xact.bit_count) ~= bc then
+    -- the response data size does not match the request coil count
+    return false, stat.INVALID_RESPONSE
+  end
+
+  xact.bits = {}
+
+  local byte = 0
+  for i = 0, xact.bit_count - 1 do
+    if i % 8 == 0 then
+      byte = byte_at(resp, resp_lead_size + math.floor(i / 8))
+    end
+    xact.bits[i + 1] = band(byte, blshift(1, i % 8)) ~= 0 and 1 or 0
+  end
+
+  return true, resp_size
+end
+
+-------------------------------------------------------------------------------
+-- READ HOLDING REGISTERS
 -------------------------------------------------------------------------------
 
 local function build_request_read_holding_registers(xact)
@@ -390,6 +514,7 @@ local function build_response_read_holding_registers(xact)
 
   return true, resp
 end
+
 -------------------------------------------------------------------------------
 
 local function parse_response_read_holding_registers(xact, resp)
@@ -429,7 +554,7 @@ local function parse_response_read_holding_registers(xact, resp)
 end
 
 -------------------------------------------------------------------------------
--- READ INPUT REGISTERS */
+-- READ INPUT REGISTERS
 -------------------------------------------------------------------------------
 
 local function build_request_read_input_registers(xact)
@@ -536,7 +661,7 @@ local function parse_response_read_input_registers(xact, resp)
 end
 
 -------------------------------------------------------------------------------
--- WRITE MULTIPLE REGISTERS */
+-- WRITE MULTIPLE REGISTERS
 -------------------------------------------------------------------------------
 
 local function build_request_write_multiple_registers(xact)
@@ -652,7 +777,7 @@ local function parse_response_write_multiple_registers(xact, resp)
 end
 
 -------------------------------------------------------------------------------
--- REPORT SLAVE ID */
+-- REPORT SLAVE ID
 -------------------------------------------------------------------------------
 
 local function build_request_report_slave_id(xact)
@@ -730,7 +855,7 @@ local function parse_response_report_slave_id(xact, resp)
 end
 
 -------------------------------------------------------------------------------
--- MASK WRITE REGISTER */
+-- MASK WRITE REGISTER
 -------------------------------------------------------------------------------
 
 local function build_request_mask_write_register(xact)

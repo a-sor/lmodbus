@@ -11,7 +11,7 @@ Of course, there are other — and more extensive — Lua implementations of the
 
 # Usage example
 
-Below are basic examples of a ModBus client and a server. For more details, please read the source code. I hope I will get around to writing proper documentation some time in the future :)
+Below are basic examples of a ModBus client and a server. For more details, please read the source code and the testing program. I hope I will get around to writing proper documentation some time in the future :)
 
 ## Client example
 
@@ -32,7 +32,8 @@ Below are basic examples of a ModBus client and a server. For more details, plea
     -- The starting address of the registers or whatever entities
     -- that are (will be) supported.
     start_addr = 600,
-    -- Quantity of registers being queried.
+    -- Quantity of registers being queried. (For 1-bit access functions,
+    -- such as Read Coils, bit_count is used.)
     word_count = 2,
   }
 
@@ -52,6 +53,8 @@ Below are basic examples of a ModBus client and a server. For more details, plea
   end
 
   for i = 1, #xact.words do
+    -- Note that for 1-bit access functions, such as Read Coils,
+    -- xact.bits is used.
     print('regs[%d] = %d\n', xact.start_addr + i - 1, xact.words[i])
   end
 ```

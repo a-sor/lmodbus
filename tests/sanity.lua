@@ -21,6 +21,14 @@ end
   local transactions = {
       -- https://www.fernhillsoftware.com/help/drivers/modbus/modbus-protocol.html
     {
+      type = 'RTU', func = 'READ_COILS', server_addr = 2,
+      start_addr = 32, bit_count = 12,
+      expected_req = "\x02\x01\x00\x20\x00\x0C\x3D\xF6",
+
+      resp = "\x02\x01\x02\x80\x02\x1D\xFD",
+      expected_bits = { 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, },
+    },
+    {
       type = 'RTU', func = 'READ_HOLDING_REGISTERS', server_addr = 1,
       start_addr = 600, word_count = 2,
       expected_req = "\x01\x03\x02\x58\x00\x02\x44\x60",
@@ -68,6 +76,14 @@ end
     },
       -- https://www.modbustools.com/modbus.html
     {
+      type = 'RTU', func = 'READ_COILS', server_addr = 4,
+      start_addr = 10, bit_count = 13,
+      expected_req = "\x04\x01\x00\x0A\x00\x0D\xDD\x98",
+
+      resp = "\x04\x01\x02\x0A\x11\xB3\x50",
+      expected_bits = {0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, },
+    },
+    {
       type = 'RTU', func = 'READ_HOLDING_REGISTERS', server_addr = 1,
       start_addr = 0, word_count = 2,
       expected_req = "\x01\x03\x00\x00\x00\x02\xC4\x0B",
@@ -98,6 +114,18 @@ end
     },
       -- https://ipc2u.com/articles/knowledge-base/modbus-rtu-made-simple-with-detailed-descriptions-and-examples/
     {
+      type = 'RTU', func = 'READ_COILS', server_addr = 17,
+      start_addr = 19, bit_count = 37,
+      expected_req = "\x11\x01\x00\x13\x00\x25\x0E\x84",
+
+      resp = "\x11\x01\x05\xCD\x6B\xB2\x0E\x1B\x45\xE6",
+      expected_bits = {1, 0, 1, 1, 0, 0, 1, 1,
+                       1, 1, 0, 1, 0, 1, 1, 0,
+                       0, 1, 0, 0, 1, 1, 0, 1,
+                       0, 1, 1, 1, 0, 0, 0, 0,
+                       1, 1, 0, 1, 1, },
+    },
+    {
       type = 'RTU', func = 'READ_HOLDING_REGISTERS', server_addr = 17,
       start_addr = 0x6B, word_count = 3,
       expected_req = "\x11\x03\x00\x6B\x00\x03\x76\x87",
@@ -121,6 +149,14 @@ end
       resp = "\x11\x10\x00\x01\x00\x02\x12\x98",
     },
       -- https://unserver.xyz/modbus-guide/
+    {
+      type = 'RTU', func = 'READ_COILS', server_addr = 1,
+      start_addr = 10, bit_count = 2,
+      expected_req = "\x01\x01\x00\x0A\x00\x02\x9D\xC9",
+
+      resp = "\x01\x01\x01\x03\x11\x89",
+      expected_bits = {1, 1, },
+    },
     {
       type = 'RTU', func = 'READ_HOLDING_REGISTERS', server_addr = 1,
       start_addr = 2, word_count = 1,
@@ -186,6 +222,18 @@ end
             error('Words mismatch:\n' ..
               sprintf('  expected_words[%d] = %d\n', i, x.expected_words[i]) ..
               sprintf('           words[%d] = %d\n', i, x.words[i])
+            )
+          end
+        end
+      elseif x.expected_bits then
+        if #x.expected_bits ~= #x.bits then
+          error('Bits count mismatch')
+        end
+        for i = 1, #x.bits do
+          if x.bits[i] ~= x.expected_bits[i] then
+            error('Bits mismatch:\n' ..
+              sprintf('  expected_bits[%d] = %d\n', i, x.expected_bits[i]) ..
+              sprintf('           bits[%d] = %d\n', i, x.bits[i])
             )
           end
         end
